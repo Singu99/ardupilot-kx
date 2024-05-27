@@ -328,6 +328,15 @@ def ap_stlib(bld, **kw):
     kw['target'] = kw['name']
     kw['source'] = []
 
+    if 'use' not in kw:
+        kw['use'] = []
+    elif isinstance(kw['use'], str):
+        # If it's a string, convert it into a list with one element
+        kw['use'] = [kw['use']]
+    
+    # Now you can safely append 'littlefs' to the list
+    kw['use'].append('littlefs')
+    
     bld.stlib(**kw)
 
 _created_program_dirs = set()

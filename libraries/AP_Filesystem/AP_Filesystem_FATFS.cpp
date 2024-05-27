@@ -7,7 +7,7 @@
 #include <stdio.h>
 #include <AP_RTC/AP_RTC.h>
 
-#if HAVE_FILESYSTEM_SUPPORT && CONFIG_HAL_BOARD == HAL_BOARD_CHIBIOS
+#if HAVE_FILESYSTEM_SUPPORT && CONFIG_HAL_BOARD == HAL_BOARD_CHIBIOS && AP_FILESYSTEM_FATFS_ENABLED
 
 #include <ff.h>
 #include <AP_HAL_ChibiOS/sdcard.h>

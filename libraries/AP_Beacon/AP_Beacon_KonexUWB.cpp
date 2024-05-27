@@ -25,11 +25,14 @@ void AP_Beacon_KonexUWB::update()
     }
     // read any available characters
     uint16_t num_bytes_read = MIN(uart->available(), sizeof(KonexUWBFrame) - num_bytes_in_block_received);
+    int16_t recv = 0;
     while (num_bytes_read-- > 0) {
-        if (!uart->read(recv_frame.raw[num_bytes_in_block_received])) {
-            break;
+        recv = uart->read();
+        if (recv < 0) {
+            break;  // Nothing to read
         }
-        const uint8_t received_char = recv_frame.raw[num_bytes_in_block_received];
+        const uint8_t received_char = recv;
+        recv_frame.raw[num_bytes_in_block_received] = received_char;
         switch (num_bytes_in_block_received)
         {
         case 0: // Preamble
