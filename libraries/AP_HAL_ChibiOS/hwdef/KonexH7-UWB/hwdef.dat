@@ -178,6 +178,12 @@ define HAL_FRAME_TYPE_DEFAULT 1
 
 define HAL_OS_LITTLEFS_IO 1
 
+# The value for STDOUT_SERIAL is a serial device name, and must be for a 
+# serial device for which pins are defined in this file. For example, SD7
+# is for UART7 (SD8 == "serial device 8" in ChibiOS).
+# STDOUT_SERIAL SD8
+# STDOUT_BAUDRATE 115200
+
 define HAL_BOARD_LOG_DIRECTORY "/APM/LOGS"
 define HAL_BOARD_TERRAIN_DIRECTORY "/APM/TERRAIN"
 
