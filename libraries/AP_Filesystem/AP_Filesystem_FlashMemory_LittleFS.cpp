@@ -453,6 +453,9 @@ void AP_Filesystem_FlashMemory_LittleFS::mark_dead()
 #define JEDEC_ID_WINBOND_W25N01GV      0xEFAA21
 #define JEDEC_ID_CYPRESS_S25FL128L     0x016018
 
+#define W25N01G_STATUS_EFAIL         0x04
+#define W25N01G_STATUS_PFAIL         0x08
+
 /* Hardware-specific constants */
 
 #define W25N01G_PROT_REG             0xA0
@@ -470,24 +473,24 @@ void AP_Filesystem_FlashMemory_LittleFS::mark_dead()
 uint8_t AP_Filesystem_FlashMemory_LittleFS::read_status_register()
 {
     WITH_SEMAPHORE(dev_sem);
-    uint8_t cmd[2] = { JEDEC_READ_STATUS, 0 };
+    uint8_t cmd[2] = { JEDEC_READ_STATUS, W25N01G_STATUS_REG };
     uint8_t status;
-    uint8_t length = 1;
-
-    if (jedec_id == JEDEC_ID_WINBOND_W25N01GV) {
-        length = 2;
-        cmd[1] = W25N01G_STATUS_REG;
-    }
-
+    uint8_t length = 2;    
     dev->transfer(cmd, length, &status, 1);
-
     return status;
 }
 
 bool AP_Filesystem_FlashMemory_LittleFS::is_busy()
 {
     // TODO(ntamas): slightly different for W25N01GV?
-    return (read_status_register() & (JEDEC_STATUS_BUSY | JEDEC_STATUS_SRP0)) != 0;
+    uint8_t status = read_status_register();
+    if ((status & W25N01G_STATUS_PFAIL) != 0) {
+        printf("Program failure!\n");
+    }
+    if ((status & W25N01G_STATUS_EFAIL) != 0) {
+        printf("Erase failure!\n");
+    }
+    return (status & JEDEC_STATUS_BUSY) != 0;
 }
 
 void AP_Filesystem_FlashMemory_LittleFS::send_command_addr(uint8_t command, uint32_t addr)
@@ -553,16 +556,10 @@ bool AP_Filesystem_FlashMemory_LittleFS::find_block_size_and_count() {
 
     // Read manufacturer ID
     uint8_t cmd = JEDEC_DEVICE_ID;
-    uint8_t buf[4];
+    uint8_t buf[4]; // buffer not yet allocated
     dev->transfer(&cmd, 1, buf, 4);
 
-    jedec_id = buf[0] << 16 | buf[1] << 8 | buf[2];
-    
-    // For some reason the JEDEC ID is to be found in buf[1], buf[2] and
-    // buf[3] for JEDEC_ID_WINBOND_W25N01GV
-    if (jedec_id == (JEDEC_ID_WINBOND_W25N01GV >> 8) && buf[3] == (JEDEC_ID_WINBOND_W25N01GV & 0xff)) {
-        jedec_id = JEDEC_ID_WINBOND_W25N01GV;
-    }
+    uint32_t id = buf[1] << 16 | buf[2] << 8 | buf[3];
 
     // Let's specify the terminology here.
     //
@@ -582,37 +579,7 @@ bool AP_Filesystem_FlashMemory_LittleFS::find_block_size_and_count() {
     uint16_t page_size = 256;
     uint32_t block_size = 4096;
 
-    switch (jedec_id) {
-    case JEDEC_ID_WINBOND_W25Q16:
-    case JEDEC_ID_MICRON_M25P16:
-        block_count = 32;   /* 128K */
-        break;
-
-    case JEDEC_ID_WINBOND_W25Q32:
-    case JEDEC_ID_WINBOND_W25X32:
-    case JEDEC_ID_MACRONIX_MX25L3206E:
-        block_count = 64;   /* 256K */
-        break;
-
-    case JEDEC_ID_MICRON_N25Q064:
-    case JEDEC_ID_WINBOND_W25Q64:
-    case JEDEC_ID_MACRONIX_MX25L6406E:
-        block_count = 128;  /* 512K */
-        break;
-
-    case JEDEC_ID_MICRON_N25Q128:
-    case JEDEC_ID_WINBOND_W25Q128:
-    case JEDEC_ID_WINBOND_W25Q128_2:
-    case JEDEC_ID_CYPRESS_S25FL128L:
-        block_count = 256;  /* 1M */
-        break;
-
-    case JEDEC_ID_WINBOND_W25Q256:
-    case JEDEC_ID_MACRONIX_MX25L25635E:
-        block_count = 512;  /* 2M */
-        use_32bit_address = true;
-        break;
-
+    switch (id) {
     case JEDEC_ID_WINBOND_W25N01GV:
         /* 128M, programmable in chunks of 2048 bytes, erasable in blocks of 128K */
         page_size = 2048;
@@ -623,8 +590,7 @@ bool AP_Filesystem_FlashMemory_LittleFS::find_block_size_and_count() {
 
     default:
         hal.scheduler->delay(2000);
-        printf("Unknown SPI Flash 0x%08x\n", jedec_id);
-        jedec_id = JEDEC_ID_UNKNOWN;
+        printf("Unknown SPI Flash 0x%08x\n", id);
         return false;
     }
 
@@ -642,6 +608,9 @@ bool AP_Filesystem_FlashMemory_LittleFS::find_block_size_and_count() {
     // handle that right now
     fs_cfg.cache_size = page_size;
 
+    jedec_id = id;
+
+    printf("SPI Flash 0x%08x found pages=%u\n", id, page_size);
     return true;
 }
 
@@ -675,6 +644,8 @@ bool AP_Filesystem_FlashMemory_LittleFS::mount_filesystem() {
     }
 
     if (!flashmem_init()) {
+        hal.scheduler->delay_microseconds(50000);
+        printf("FlashMemory_LittleFS: init failed\n");
         mark_dead();
         return false;
     }
@@ -706,7 +677,8 @@ bool AP_Filesystem_FlashMemory_LittleFS::mount_filesystem() {
         lfs_mkdir(&fs, HAL_BOARD_STORAGE_DIRECTORY);
     }
 #endif
-
+    
+    printf("FlashMemory_LittleFS: mounted\n");
     mounted = true;
     return true;
 }
