@@ -21,6 +21,7 @@
 #include "AP_Beacon_Pozyx.h"
 #include "AP_Beacon_Marvelmind.h"
 #include "AP_Beacon_Nooploop.h"
+#include "AP_Beacon_KonexUWB.h"
 #include "AP_Beacon_SITL.h"
 
 #include <AP_Common/Location.h>
@@ -38,7 +39,7 @@ const AP_Param::GroupInfo AP_Beacon::var_info[] = {
     // @Param: _TYPE
     // @DisplayName: Beacon based position estimation device type
     // @Description: What type of beacon based position estimation device is connected
-    // @Values: 0:None,1:Pozyx,2:Marvelmind,3:Nooploop,10:SITL
+    // @Values: 0:None,1:Pozyx,2:Marvelmind,3:Nooploop,4:KonexUWB,10:SITL
     // @User: Advanced
     AP_GROUPINFO_FLAGS("_TYPE",    0, AP_Beacon, _type, 0, AP_PARAM_FLAG_ENABLE),
 
@@ -110,6 +111,9 @@ void AP_Beacon::init(void)
         break;
     case Type::Nooploop:
         _driver = NEW_NOTHROW AP_Beacon_Nooploop(*this);
+        break;
+    case Type::KonexUWB:
+        _driver = NEW_NOTHROW AP_Beacon_KonexUWB(*this);
         break;
 #if AP_BEACON_SITL_ENABLED
     case Type::SITL:
