@@ -9,6 +9,7 @@
 #include "AP_Filesystem.h"
 #include "AP_Filesystem_FlashMemory_LittleFS.h"
 
+// Future note for debug: Enable traces of lts filesystem operations
 #include "lfs.h"
 
 #if 0

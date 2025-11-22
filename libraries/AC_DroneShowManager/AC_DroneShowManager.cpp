@@ -1564,7 +1564,7 @@ bool AC_DroneShowManager::_is_gps_time_ok() const
 
 bool AC_DroneShowManager::is_prepared_to_take_off() const
 {
-    return (!_preflight_check_failures && _is_gps_time_ok());
+    return (!_preflight_check_failures && ( _is_gps_time_ok() || !uses_gps_time_for_show_start()));  // @Modification: Only checking gps time if it's configured to use it.
 }
 
 bool AC_DroneShowManager::_load_show_file_from_storage()
