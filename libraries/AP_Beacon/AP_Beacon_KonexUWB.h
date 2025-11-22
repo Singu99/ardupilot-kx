@@ -39,8 +39,6 @@ public:
     void update() override;
 
 private:
-    static constexpr uint8_t XYZ_AXIS_COUNT = 3;
-
     struct RelativeLocation
     {
         float x__m, y__m, z__m;
