@@ -275,9 +275,9 @@ void Sailboat::relax_sails()
 // calculate throttle and mainsail angle required to attain desired speed (in m/s)
 void Sailboat::get_throttle_and_set_mainsail(float desired_speed, float &throttle_out)
 {
+    throttle_out = 0.0f;
     if (!sail_enabled()) {
         relax_sails();
-        throttle_out = 0.0f;
         return;
     }
 
@@ -292,8 +292,6 @@ void Sailboat::get_throttle_and_set_mainsail(float desired_speed, float &throttl
                                                                         rover.g.speed_cruise,
                                                                         rover.g.throttle_cruise * 0.01f,
                                                                         rover.G_Dt);
-    } else {
-        throttle_out = 0.0f;
     }
 
     if (motor_state == UseMotor::USE_MOTOR_ALWAYS) {
@@ -319,7 +317,7 @@ float Sailboat::get_VMG() const
         return speed;
     }
 
-    return (speed * cosf(wrap_PI(radians(rover.g2.wp_nav.wp_bearing_cd() * 0.01f) - rover.ahrs.get_yaw())));
+    return (speed * cosf(wrap_PI(radians(rover.g2.wp_nav.wp_bearing_cd() * 0.01f) - rover.ahrs.get_yaw_rad())));
 }
 
 // handle user initiated tack while in acro mode
@@ -330,7 +328,7 @@ void Sailboat::handle_tack_request_acro()
     }
     // set tacking heading target to the current angle relative to the true wind but on the new tack
     currently_tacking = true;
-    tack_heading_rad = wrap_2PI(rover.ahrs.get_yaw() + 2.0f * wrap_PI((rover.g2.windvane.get_true_wind_direction_rad() - rover.ahrs.get_yaw())));
+    tack_heading_rad = wrap_2PI(rover.ahrs.get_yaw_rad() + 2.0f * wrap_PI((rover.g2.windvane.get_true_wind_direction_rad() - rover.ahrs.get_yaw_rad())));
 
     tack_request_ms = AP_HAL::millis();
 }
@@ -338,7 +336,7 @@ void Sailboat::handle_tack_request_acro()
 // return target heading in radians when tacking (only used in acro)
 float Sailboat::get_tack_heading_rad()
 {
-    if (fabsf(wrap_PI(tack_heading_rad - rover.ahrs.get_yaw())) < radians(SAILBOAT_TACKING_ACCURACY_DEG) ||
+    if (fabsf(wrap_PI(tack_heading_rad - rover.ahrs.get_yaw_rad())) < radians(SAILBOAT_TACKING_ACCURACY_DEG) ||
        ((AP_HAL::millis() - tack_request_ms) > SAILBOAT_AUTO_TACKING_TIMEOUT_MS)) {
         clear_tack();
     }
@@ -467,7 +465,7 @@ float Sailboat::calc_heading(float desired_heading_cd)
 
     // if tack triggered, calculate target heading
     if (should_tack && (now - tack_clear_ms) > TACK_RETRY_TIME_MS) {
-        gcs().send_text(MAV_SEVERITY_INFO, "Sailboat: Tacking");
+        GCS_SEND_TEXT(MAV_SEVERITY_INFO, "Sailboat: Tacking");
         // calculate target heading for the new tack
         switch (current_tack) {
             case AP_WindVane::Sailboat_Tack::TACK_PORT:
@@ -484,7 +482,7 @@ float Sailboat::calc_heading(float desired_heading_cd)
     // if we are tacking we maintain the target heading until the tack completes or times out
     if (currently_tacking) {
         // check if we have reached target
-        if (fabsf(wrap_PI(tack_heading_rad - rover.ahrs.get_yaw())) <= radians(SAILBOAT_TACKING_ACCURACY_DEG)) {
+        if (fabsf(wrap_PI(tack_heading_rad - rover.ahrs.get_yaw_rad())) <= radians(SAILBOAT_TACKING_ACCURACY_DEG)) {
             clear_tack();
         } else if ((now - auto_tack_start_ms) > SAILBOAT_AUTO_TACKING_TIMEOUT_MS) {
             // tack has taken too long
@@ -492,7 +490,7 @@ float Sailboat::calc_heading(float desired_heading_cd)
                 // if we have throttle available use it for another two time periods to get the tack done
                 tack_assist = true;
             } else {
-                gcs().send_text(MAV_SEVERITY_INFO, "Sailboat: Tacking timed out");
+                GCS_SEND_TEXT(MAV_SEVERITY_INFO, "Sailboat: Tacking timed out");
                 clear_tack();
             }
         }
@@ -523,7 +521,7 @@ void Sailboat::set_motor_state(UseMotor state, bool report_failure)
         rover.get_frame_type() != rover.g2.motors.frame_type::FRAME_TYPE_UNDEFINED) {
         motor_state = state;
     } else if (report_failure) {
-        gcs().send_text(MAV_SEVERITY_WARNING, "Sailboat: failed to enable motor");
+        GCS_SEND_TEXT(MAV_SEVERITY_WARNING, "Sailboat: failed to enable motor");
     }
 }
 

@@ -39,7 +39,8 @@ extern const AP_HAL::HAL& hal;
     CONFIG_HAL_BOARD_SUBTYPE == HAL_BOARD_SUBTYPE_LINUX_BH || \
     CONFIG_HAL_BOARD_SUBTYPE == HAL_BOARD_SUBTYPE_LINUX_DARK || \
     CONFIG_HAL_BOARD_SUBTYPE == HAL_BOARD_SUBTYPE_LINUX_PXFMINI || \
-    CONFIG_HAL_BOARD_SUBTYPE == HAL_BOARD_SUBTYPE_LINUX_CANZERO
+    CONFIG_HAL_BOARD_SUBTYPE == HAL_BOARD_SUBTYPE_LINUX_CANZERO || \
+    CONFIG_HAL_BOARD_SUBTYPE == HAL_BOARD_SUBTYPE_LINUX_PILOTPI
 #define APM_LINUX_RCIN_RATE             500
 #define APM_LINUX_IO_RATE               50
 #elif CONFIG_HAL_BOARD_SUBTYPE == HAL_BOARD_SUBTYPE_LINUX_OBAL_V1
@@ -408,7 +409,7 @@ uint8_t Scheduler::calculate_thread_priority(priority_base base, int8_t priority
 */
 bool Scheduler::thread_create(AP_HAL::MemberProc proc, const char *name, uint32_t stack_size, priority_base base, int8_t priority)
 {
-    Thread *thread = new Thread{(Thread::task_t)proc};
+    Thread *thread = NEW_NOTHROW Thread{(Thread::task_t)proc};
     if (!thread) {
         return false;
     }
